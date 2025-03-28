@@ -1,0 +1,8 @@
+{
+    "require": {
+        "php": ">=7.4.0",
+        "pusher/pusher-php-server": "^7.2",
+        "symfony/var-dumper": "^6.3",
+        "google/apiclient": "^2.0"
+    }
+}

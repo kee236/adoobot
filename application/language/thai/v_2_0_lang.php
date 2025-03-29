@@ -222,7 +222,6 @@ $lang = array(
     "page negative feedback" => "ความคิดเห็นเชิงลบของเพจ",
     "page impressions unique" => "จำนวนการแสดงผลเพจที่ไม่ซ้ำ",
     "page content activity type unique page post" => "ประเภทกิจกรรมเนื้อหาเพจ โพสต์เพจที่ไม่ซ้ำ",
-
     "page content activity type unique other" => "ประเภทกิจกรรมเนื้อหาเพจ อื่นๆ ที่ไม่ซ้ำ",
     "page content activity type unique fan" => "ประเภทกิจกรรมเนื้อหาเพจ แฟนที่ไม่ซ้ำ",
     "you have successfully subscribed into our mailing services." => "คุณได้สมัครรับข้อมูลจากบริการจดหมายของเราเรียบร้อยแล้ว",
@@ -300,4 +299,27 @@ $lang = array(
     "page views: latest device statistics" => "จำนวนการเข้าชมเพจ: สถิติตามอุปกรณ์ล่าสุด",
     "the number of people who have viewed each page profile tab." => "จำนวนคนที่เข้าชมแต่ละแท็บโปรไฟล์เพจ",
     "page view" => "การเข้าชมเพจ",
-    "page views: latest viewed each page profile tab" => "จ
+    "page views: latest viewed each page profile tab" => "จำนวนการเข้าชมเพจ: การเข้าชมแต่ละแท็บโปรไฟล์เพจล่าสุด",
+    "top 10 countries like your page" => "10 ประเทศที่ถูกใจเพจของคุณมากที่สุด",
+    "page fans: top 10 countries" => "แฟนเพจ: 10 ประเทศแรก",
+    "page post impressions paid" => "การแสดงผลโพสต์เพจแบบเสียเงิน",
+    "the total number of people who have liked your page, fan removes from your page." => "จำนวนรวมของผู้ที่ถูกใจเพจของคุณ จำนวนการเลิกถูกใจเพจของคุณ",
+    "daily fan adds and removes in your page" => "จำนวนการถูกใจและเลิกถูกใจเพจของคุณรายวัน",
+    "write your routesms.com registered hostname which was provided from routesms.com. you've must include your hostname as given below example formate. example http://smsplus.routesms.com/" => "เขียนชื่อโฮสต์ที่ลงทะเบียน routesms.com ของคุณ ซึ่งได้รับจาก routesms.com คุณต้องใส่ชื่อโฮสต์ของคุณตามรูปแบบตัวอย่างด้านล่าง ตัวอย่าง http://smsplus.routesms.com/",
+    "please enter url" => "โปรดป้อน URL",
+    "limit has been exceeded. you can no longer use this feature." => "เกินขีดจำกัดแล้ว คุณไม่สามารถใช้คุณสมบัตินี้ได้อีกต่อไป",
+    "the total number of people who have liked your page, and daily fan adds in your page and fan removes in your page." => "จำนวนรวมของผู้ที่ถูกใจเพจของคุณ และจำนวนการถูกใจเพจของคุณรายวัน และจำนวนการเลิกถูกใจเพจของคุณรายวัน",
+    "page user demographics" => "ข้อมูลประชากรผู้ใช้เพจ",
+    "write your message here..." => "เขียนข้อความของคุณที่นี่...",
+);
+
+
+
+    
+
+
+
+ 
+    
+    
+    

@@ -1,4 +1,4 @@
-       <?php
+   
 /*
 Addon Name: Visual Flow Builder 
 Unique Name: visual_flow_builder
@@ -22,10 +22,8 @@ INSERT INTO `add_ons` (`id`, `add_on_name`, `unique_name`, `version`, `installed
 INSERT INTO `modules` (`id`, `module_name`, `add_ons_id`, `extra_text`, `limit_enabled`, `bulk_limit_enabled`, `deleted`) VALUES
 (315, 'Bot - Visual Flow Builder Access', 2, '', '1', '0', '0');
 
- $sql=
-        array
-        (
-            0 => "CREATE TABLE IF NOT EXISTS `visual_flow_builder_campaign` (
+ 
+CREATE TABLE IF NOT EXISTS `visual_flow_builder_campaign` (
                       `id` int(11) NOT NULL AUTO_INCREMENT,
                       `user_id` int(11) NOT NULL,
                       `page_id` int(11) NOT NULL,
@@ -33,6 +31,6 @@ INSERT INTO `modules` (`id`, `module_name`, `add_ons_id`, `extra_text`, `limit_e
                       `reference_name` text NOT NULL,
                       `media_type` enum('fb','ig') NOT NULL DEFAULT 'fb',
                       `json_data` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-                      PRIMARY KEY (`id`)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;"
-        );
+   PRIMARY KEY (`id`)
+   ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        

@@ -12,11 +12,11 @@ Modules:
    }
 }
 Project ID: 59
-Addon URI: https://xerochat.com
-Author: Xerone IT
-Author URI: https://xeroneit.net
 Version: 1.6.9
 Description: 
+
+INSERT INTO `add_ons` (`id`, `add_on_name`, `unique_name`, `version`, `installed_at`, `update_at`, `purchase_code`, `module_folder_name`, `project_id`) VALUES
+(2, 'Visual Flow Builder', 'visual_flow_builder', '1.6.9', '2022-01-19 12:00:00', '2022-01-19 12:00:00', '', 'visual_flow_builder', 59);
 */
 
 require_once("application/controllers/Home.php"); // loading home controller

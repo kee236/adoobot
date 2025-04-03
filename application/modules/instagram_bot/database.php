@@ -14,6 +14,7 @@ Modules:
 Project ID: 62
 Version: 1.0
 Description: 
+*/
 
 INSERT INTO `add_ons` (`id`, `add_on_name`, `unique_name`, `version`, `installed_at`, `update_at`, `purchase_code`, `module_folder_name`, `project_id`) VALUES
 
@@ -21,6 +22,6 @@ INSERT INTO `add_ons` (`id`, `add_on_name`, `unique_name`, `version`, `installed
 
 INSERT INTO `modules` (`id`, `module_name`, `add_ons_id`, `extra_text`, `limit_enabled`, `bulk_limit_enabled`, `deleted`)
 
-(320, 'Bot - Instagram Bot', 3, 'month', '1', '0', '0');
+(320, 'Bot - Instagram Bot', 3, '', '0', '0', '');
 
-*/
+

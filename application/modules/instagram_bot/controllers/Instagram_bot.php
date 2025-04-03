@@ -19,6 +19,9 @@ INSERT INTO `add_ons` (`id`, `add_on_name`, `unique_name`, `version`, `installed
 
 (3, 'Instagram Bot & Private Reply', 'instagram_bot', '1.0', '2022-01-19 12:00:00', '2022-01-19 12:00:00', '', 'instagram_bot', 62);
 
+INSERT INTO `modules` (`id`, `module_name`, `add_ons_id`, `extra_text`, `limit_enabled`, `bulk_limit_enabled`, `deleted`)
+
+(320, 'Bot - Instagram Bot', 3, 'month', '1', '0', '0');
 
 */
 

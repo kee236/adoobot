@@ -17,6 +17,11 @@ Description:
 
 INSERT INTO `add_ons` (`id`, `add_on_name`, `unique_name`, `version`, `installed_at`, `update_at`, `purchase_code`, `module_folder_name`, `project_id`) VALUES
 (2, 'Visual Flow Builder', 'visual_flow_builder', '1.6.9', '2022-01-19 12:00:00', '2022-01-19 12:00:00', '', 'visual_flow_builder', 59);
+
+
+INSERT INTO `modules` (`id`, `module_name`, `add_ons_id`, `extra_text`, `limit_enabled`, `bulk_limit_enabled`, `deleted`) VALUES
+(315, 'Bot - Visual Flow Builder Access', 2, '', '1', '0', '0');
+
 */
 
 require_once("application/controllers/Home.php"); // loading home controller

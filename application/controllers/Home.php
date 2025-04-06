@@ -3734,7 +3734,437 @@ class Home extends CI_Controller
 
     //==========================================================================
     //=======================USAGE LOG & LICENSE FUNCTIONS======================
-    public function _insert_usage_log($module_id = 0, $usage_count = 0, $user_id = 0)
+
+
+
+
+    //=======================USAGE LOG & LICENSE FUNCTIONS======================
+    public function _insert_usage_log($module_id=0,$usage_count=0,$user_id=0)
+    {
+
+        if($module_id==0 || $usage_count==0) return false;
+        if($user_id==0) $user_id=$this->session->userdata("user_id");
+        if($user_id==0 || $user_id=="") return false;
+
+        $usage_month=date("n");
+        $usage_year=date("Y");
+        $where=array("module_id"=>$module_id,"user_id"=>$user_id,"usage_month"=>$usage_month,"usage_year"=>$usage_year);
+
+        $insert_data=array("module_id"=>$module_id,"user_id"=>$user_id,"usage_month"=>$usage_month,"usage_year"=>$usage_year,"usage_count"=>$usage_count);
+
+        if($this->basic->is_exist("usage_log",$where))
+        {
+            $this->db->set('usage_count', 'usage_count+'.$usage_count, FALSE);
+            $this->db->where($where);
+            $this->db->update('usage_log');
+        }
+        else $this->basic->insert_data("usage_log",$insert_data);
+
+        return true;
+    }
+
+    public function _delete_usage_log($module_id=0,$usage_count=0,$user_id=0)
+    {
+        if($module_id==0 || $usage_count==0) return false;
+        if($user_id==0) $user_id=$this->session->userdata("user_id");
+        if($user_id==0 || $user_id=="") return false;
+
+        $usage_month=date("n");
+        $usage_year=date("Y");
+
+        if($this->basic->is_exist("modules",array("id"=>$module_id,"extra_text"=>""),"id"))
+        {
+            $existing_info = $this->basic->get_data('usage_log',array('where'=>array('module_id'=>$module_id,'usage_count >='=>1,'user_id'=>$user_id)));
+            if(!empty($existing_info))
+            {
+                $where=array("id"=>$existing_info[0]['id'],"user_id"=>$user_id);
+                $this->db->set('usage_count', 'usage_count-'.$usage_count, FALSE);
+                $this->db->where($where);
+                $this->db->update('usage_log');
+            }
+        }
+        else
+        {
+            $where=array("module_id"=>$module_id,"user_id"=>$user_id,"usage_month"=>$usage_month,"usage_year"=>$usage_year);
+            $insert_data=array("module_id"=>$module_id,"user_id"=>$user_id,"usage_month"=>$usage_month,"usage_year"=>$usage_year,"usage_count"=>$usage_count);
+
+            if($this->basic->is_exist("usage_log",$where))
+            {
+                $this->db->set('usage_count', 'usage_count-'.$usage_count, FALSE);
+                $this->db->where($where);
+                $this->db->update('usage_log');
+            }
+        }
+
+        return true;
+    }
+
+    public function _check_usage($module_id=0,$request=0,$user_id=0)
+    {
+        if($module_id==0 || $request==0) return "0";
+        if($user_id==0) $user_id=$this->session->userdata("user_id");
+        if($user_id==0 || $user_id=="") return false;
+
+        if($this->basic->is_exist("modules",array("id"=>$module_id,"extra_text"=>""),"id")) // not monthly limit modules
+        {
+            $this->db->select_sum('usage_count');
+            $this->db->where('user_id', $user_id);
+            $this->db->where('module_id', $module_id);
+            $info = $this->db->get('usage_log')->result_array(); 
+
+            $usage_count=0;
+            if(isset($info[0]["usage_count"]))
+            $usage_count=$info[0]["usage_count"];
+        }
+        else
+        {
+            $usage_month=date("n");
+            $usage_year=date("Y");
+            $info=$this->basic->get_data("usage_log",$where=array("where"=>array("usage_month"=>$usage_month,"usage_year"=>$usage_year,"module_id"=>$module_id,"user_id"=>$user_id)));
+            $usage_count=0;
+            if(isset($info[0]["usage_count"]))
+            $usage_count=$info[0]["usage_count"];
+        }
+
+
+
+        $monthly_limit=array();
+        $bulk_limit=array();
+        $module_ids=array();
+
+        if($this->session->userdata("package_info")!="")
+        {
+            $package_info=$this->session->userdata("package_info");
+            if($this->session->userdata('user_type') == 'Admin') return "1";
+        }
+        else
+        {
+            $package_data = $this->basic->get_data("users", $where=array("where"=>array("users.id"=>$user_id)),"package.*,users.user_type",array('package'=>"users.package_id=package.id,left"));
+            $package_info=array();
+            if(array_key_exists(0, $package_data))
+            $package_info=$package_data[0];
+            if($package_info['user_type'] == 'Admin') return "1";
+        }
+
+        if(isset($package_info["bulk_limit"]))    $bulk_limit=json_decode($package_info["bulk_limit"],true);
+        if(isset($package_info["monthly_limit"])) $monthly_limit=json_decode($package_info["monthly_limit"],true);
+        if(isset($package_info["module_ids"]))    $module_ids=explode(',', $package_info["module_ids"]);
+
+        $return = "0";
+        if(in_array($module_id, $module_ids) && $bulk_limit[$module_id] > 0 && $bulk_limit[$module_id]<$request)
+         $return = "2"; // bulk limit crossed | 0 means unlimited
+        else if(in_array($module_id, $module_ids) && $monthly_limit[$module_id] > 0 && $monthly_limit[$module_id]<($request+$usage_count))
+         $return = "3"; // montly limit crossed | 0 means unlimited
+        else  $return = "1"; //success
+
+        return $return;
+    }
+
+    public function print_limit_message($module_id=0,$request=0)
+    {
+        $status=$this->_check_usage($module_id,$request);
+        if($status=="2")
+        {
+            echo $this->lang->line("sorry, your bulk limit is exceeded for this module.")."<a href='".site_url('usage_history')."'>".$this->lang->line("click here to see usage log")."</a>";
+            exit();
+        }
+        else if($status=="3")
+        {
+            echo $this->lang->line("sorry, your monthly limit is exceeded for this module.")."<a href='".site_url('usage_history')."'>".$this->lang->line("click here to see usage log")."</a>";
+            exit();
+        }
+
+    }
+
+    public function member_validity()
+    {
+        if($this->session->userdata('logged_in') == 1 && $this->session->userdata('user_type') != 'Admin') {
+            $where['where'] = array('id'=>$this->session->userdata('user_id'));
+            $user_expire_date = $this->basic->get_data('users',$where,$select=array('expired_date'));
+            $expire_date = strtotime($user_expire_date[0]['expired_date']);
+            $current_date = strtotime(date("Y-m-d"));
+            $package_data=$this->basic->get_data("users",$where=array("where"=>array("users.id"=>$this->session->userdata("user_id"))),$select="package.price as price",$join=array('package'=>"users.package_id=package.id,left"));
+            if(is_array($package_data) && array_key_exists(0, $package_data))
+            $price=$package_data[0]["price"];
+            if($price=="Trial") $price=1;
+            if ($expire_date < $current_date && ($price>0 && $price!=""))
+            redirect('payment/buy_package','Location');
+        }
+    }
+
+    public function important_feature()
+    {
+                //bugs
+    }
+
+
+    public function credential_check($secret_code=0)
+    {
+                //bugs
+    }
+
+    public function credential_check_action()
+    {
+                //bugs
+
+    }
+
+    public function code_activation_check_action($purchase_code,$only_domain,$periodic=0)
+    {
+                //bugs
+    }
+
+    public function periodic_check(){
+                //bugs
+    }
+
+
+    public function license_check()
+    {
+                //bugs
+
+    }
+
+    public function license_check_action()
+    {
+        $encoded = file_get_contents(APPPATH . 'core/licence_type.txt');
+        $encrypt_method = "AES-256-CBC";
+        $secret_key = 't8Mk8fsJMnFw69FGG5';
+        $secret_iv = '9fljzKxZmMmoT358yZ';
+        $key = hash('sha256', $secret_key);
+        $iv = substr(hash('sha256', $secret_iv), 0, 16);
+        $decoded = openssl_decrypt(base64_decode($encoded), $encrypt_method, $key, 0, $iv);
+
+        $decoded = explode('_', $decoded);
+        $decoded = array_pop($decoded);
+        $this->session->set_userdata('license_type',$decoded);
+    }
+
+    public function php_info()
+    {
+        if($this->session->userdata('user_type')== 'Admin')
+        echo phpinfo();
+        else redirect('home/access_forbidden', 'location');
+    }
+
+
+    #xerocchat 
+
+
+
+    //=======================USAGE LOG & LICENSE FUNCTIONS======================
+    public function _insert_usage_log($module_id=0,$usage_count=0,$user_id=0)
+    {
+
+        if($module_id==0 || $usage_count==0) return false;
+        if($user_id==0) $user_id=$this->session->userdata("user_id");
+        if($user_id==0 || $user_id=="") return false;
+
+        $usage_month=date("n");
+        $usage_year=date("Y");
+        $where=array("module_id"=>$module_id,"user_id"=>$user_id,"usage_month"=>$usage_month,"usage_year"=>$usage_year);
+
+        $insert_data=array("module_id"=>$module_id,"user_id"=>$user_id,"usage_month"=>$usage_month,"usage_year"=>$usage_year,"usage_count"=>$usage_count);
+
+        if($this->basic->is_exist("usage_log",$where))
+        {
+            $this->db->set('usage_count', 'usage_count+'.$usage_count, FALSE);
+            $this->db->where($where);
+            $this->db->update('usage_log');
+        }
+        else $this->basic->insert_data("usage_log",$insert_data);
+
+        return true;
+    }
+
+    public function _delete_usage_log($module_id=0,$usage_count=0,$user_id=0)
+    {
+        if($module_id==0 || $usage_count==0) return false;
+        if($user_id==0) $user_id=$this->session->userdata("user_id");
+        if($user_id==0 || $user_id=="") return false;
+
+        $usage_month=date("n");
+        $usage_year=date("Y");
+
+        if($this->basic->is_exist("modules",array("id"=>$module_id,"extra_text"=>""),"id"))
+        {
+            $existing_info = $this->basic->get_data('usage_log',array('where'=>array('module_id'=>$module_id,'usage_count >='=>1,'user_id'=>$user_id)));
+            if(!empty($existing_info))
+            {
+                $where=array("id"=>$existing_info[0]['id'],"user_id"=>$user_id);
+                $this->db->set('usage_count', 'usage_count-'.$usage_count, FALSE);
+                $this->db->where($where);
+                $this->db->update('usage_log');
+            }
+        }
+        else
+        {
+            $where=array("module_id"=>$module_id,"user_id"=>$user_id,"usage_month"=>$usage_month,"usage_year"=>$usage_year);
+            $insert_data=array("module_id"=>$module_id,"user_id"=>$user_id,"usage_month"=>$usage_month,"usage_year"=>$usage_year,"usage_count"=>$usage_count);
+
+            if($this->basic->is_exist("usage_log",$where))
+            {
+                $this->db->set('usage_count', 'usage_count-'.$usage_count, FALSE);
+                $this->db->where($where);
+                $this->db->update('usage_log');
+            }
+        }
+
+        return true;
+    }
+
+    public function _check_usage($module_id=0,$request=0,$user_id=0)
+    {
+        if($module_id==0 || $request==0) return "0";
+        if($user_id==0) $user_id=$this->session->userdata("user_id");
+        if($user_id==0 || $user_id=="") return false;
+
+        if($this->basic->is_exist("modules",array("id"=>$module_id,"extra_text"=>""),"id")) // not monthly limit modules
+        {
+            $this->db->select_sum('usage_count');
+            $this->db->where('user_id', $user_id);
+            $this->db->where('module_id', $module_id);
+            $info = $this->db->get('usage_log')->result_array(); 
+
+            $usage_count=0;
+            if(isset($info[0]["usage_count"]))
+            $usage_count=$info[0]["usage_count"];
+        }
+        else
+        {
+            $usage_month=date("n");
+            $usage_year=date("Y");
+            $info=$this->basic->get_data("usage_log",$where=array("where"=>array("usage_month"=>$usage_month,"usage_year"=>$usage_year,"module_id"=>$module_id,"user_id"=>$user_id)));
+            $usage_count=0;
+            if(isset($info[0]["usage_count"]))
+            $usage_count=$info[0]["usage_count"];
+        }
+
+
+
+        $monthly_limit=array();
+        $bulk_limit=array();
+        $module_ids=array();
+
+        if($this->session->userdata("package_info")!="")
+        {
+            $package_info=$this->session->userdata("package_info");
+            if($this->session->userdata('user_type') == 'Admin') return "1";
+        }
+        else
+        {
+            $package_data = $this->basic->get_data("users", $where=array("where"=>array("users.id"=>$user_id)),"package.*,users.user_type",array('package'=>"users.package_id=package.id,left"));
+            $package_info=array();
+            if(array_key_exists(0, $package_data))
+            $package_info=$package_data[0];
+            if($package_info['user_type'] == 'Admin') return "1";
+        }
+
+        if(isset($package_info["bulk_limit"]))    $bulk_limit=json_decode($package_info["bulk_limit"],true);
+        if(isset($package_info["monthly_limit"])) $monthly_limit=json_decode($package_info["monthly_limit"],true);
+        if(isset($package_info["module_ids"]))    $module_ids=explode(',', $package_info["module_ids"]);
+
+        $return = "0";
+        if(in_array($module_id, $module_ids) && $bulk_limit[$module_id] > 0 && $bulk_limit[$module_id]<$request)
+         $return = "2"; // bulk limit crossed | 0 means unlimited
+        else if(in_array($module_id, $module_ids) && $monthly_limit[$module_id] > 0 && $monthly_limit[$module_id]<($request+$usage_count))
+         $return = "3"; // montly limit crossed | 0 means unlimited
+        else  $return = "1"; //success
+
+        return $return;
+    }
+
+    public function print_limit_message($module_id=0,$request=0)
+    {
+        $status=$this->_check_usage($module_id,$request);
+        if($status=="2")
+        {
+            echo $this->lang->line("sorry, your bulk limit is exceeded for this module.")."<a href='".site_url('usage_history')."'>".$this->lang->line("click here to see usage log")."</a>";
+            exit();
+        }
+        else if($status=="3")
+        {
+            echo $this->lang->line("sorry, your monthly limit is exceeded for this module.")."<a href='".site_url('usage_history')."'>".$this->lang->line("click here to see usage log")."</a>";
+            exit();
+        }
+
+    }
+
+    public function member_validity()
+    {
+        if($this->session->userdata('logged_in') == 1 && $this->session->userdata('user_type') != 'Admin') {
+            $where['where'] = array('id'=>$this->session->userdata('user_id'));
+            $user_expire_date = $this->basic->get_data('users',$where,$select=array('expired_date'));
+            $expire_date = strtotime($user_expire_date[0]['expired_date']);
+            $current_date = strtotime(date("Y-m-d"));
+            $package_data=$this->basic->get_data("users",$where=array("where"=>array("users.id"=>$this->session->userdata("user_id"))),$select="package.price as price",$join=array('package'=>"users.package_id=package.id,left"));
+            if(is_array($package_data) && array_key_exists(0, $package_data))
+            $price=$package_data[0]["price"];
+            if($price=="Trial") $price=1;
+            if ($expire_date < $current_date && ($price>0 && $price!=""))
+            redirect('payment/buy_package','Location');
+        }
+    }
+
+    public function important_feature()
+    {
+                //bugs
+    }
+
+
+    public function credential_check($secret_code=0)
+    {
+                //bugs
+    }
+
+    public function credential_check_action()
+    {
+                //bugs
+
+    }
+
+    public function code_activation_check_action($purchase_code,$only_domain,$periodic=0)
+    {
+                //bugs
+    }
+
+    public function periodic_check(){
+                //bugs
+    }
+
+
+    public function license_check()
+    {
+                //bugs
+
+    }
+
+    public function license_check_action()
+    {
+        $encoded = file_get_contents(APPPATH . 'core/licence_type.txt');
+        $encrypt_method = "AES-256-CBC";
+        $secret_key = 't8Mk8fsJMnFw69FGG5';
+        $secret_iv = '9fljzKxZmMmoT358yZ';
+        $key = hash('sha256', $secret_key);
+        $iv = substr(hash('sha256', $secret_iv), 0, 16);
+        $decoded = openssl_decrypt(base64_decode($encoded), $encrypt_method, $key, 0, $iv);
+
+        $decoded = explode('_', $decoded);
+        $decoded = array_pop($decoded);
+        $this->session->set_userdata('license_type',$decoded);
+    }
+
+    public function php_info()
+    {
+        if($this->session->userdata('user_type')== 'Admin')
+        echo phpinfo();
+        else redirect('home/access_forbidden', 'location');
+    }
+
+
+    
+    
+    /*public function _insert_usage_log($module_id = 0, $usage_count = 0, $user_id = 0)
     {
 
         if ($module_id == 0 || $usage_count == 0) return false;
@@ -4078,6 +4508,10 @@ class Home extends CI_Controller
             echo phpinfo();
         else redirect('home/access_forbidden', 'location');
     }
+    
+    */
+
+    
     //=======================USAGE LOG & LICENSE FUNCTIONS======================
     //==========================================================================
 

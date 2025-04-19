@@ -1,3 +1,48 @@
+
+ALTER TABLE `ecommerce_config`
+    --  ลบ Gateway ที่ไม่ใช้
+    DROP COLUMN `stripe_secret_key`,
+    DROP COLUMN `stripe_publishable_key`,
+    DROP COLUMN `paystack_secret_key`,
+    DROP COLUMN `paystack_public_key`,
+    DROP COLUMN `razorpay_key_id`,
+    DROP COLUMN `razorpay_key_secret`,
+    DROP COLUMN `mollie_api_key`,
+    DROP COLUMN `mercadopago_public_key`,
+    DROP COLUMN `mercadopago_access_token`,
+    DROP COLUMN `marcadopago_country`,
+    DROP COLUMN `sslcommerz_store_id`,
+    DROP COLUMN `sslcommerz_store_password`,
+    DROP COLUMN `sslcommerz_mode`,
+    DROP COLUMN `senangpay_merchent_id`,
+    DROP COLUMN `senangpay_secret_key`,
+    DROP COLUMN `senangpay_mode`,
+    DROP COLUMN `instamojo_api_key`,
+    DROP COLUMN `instamojo_auth_token`,
+    DROP COLUMN `instamojo_mode`,
+    DROP COLUMN `xendit_secret_api_key`,
+    DROP COLUMN `paymaya_public_key`,
+    DROP COLUMN `myfatoorah_api_key`,
+    DROP COLUMN `myfatoorah_mode`,
+    DROP COLUMN `toyyibpay_secret_key`,
+    DROP COLUMN `paymaya_secret_key`,
+    DROP COLUMN `paymaya_mode`,
+    DROP COLUMN `toyyibpay_category_code`,
+    DROP COLUMN `toyyibpay_mode`,
+
+    --  เพิ่ม Bank Transfer
+    ADD COLUMN `bank_transfer_enabled` ENUM('0','1') NOT NULL DEFAULT '0' COMMENT 'Enable/Disable Bank Transfer' AFTER `manual_payment`,
+    ADD COLUMN `bank_account_name` VARCHAR(255) NULL COMMENT 'Account Name for Bank Transfer' AFTER `bank_transfer_enabled`,
+    ADD COLUMN `bank_name` VARCHAR(255) NULL COMMENT 'Bank Name for Bank Transfer' AFTER `bank_account_name`,
+    ADD COLUMN `bank_account_number` VARCHAR(255) NULL COMMENT 'Account Number for Bank Transfer' AFTER `bank_name`,
+    ADD COLUMN `bank_branch` VARCHAR(255) NULL COMMENT 'Bank Branch for Bank Transfer' AFTER `bank_account_number`,
+
+    --  ปรับปรุง currency
+    MODIFY `currency` VARCHAR(20) NOT NULL DEFAULT 'THB' COMMENT 'Currency Code';
+
+
+
+
 ALTER TABLE `payment_config`
     -- เพิ่มคอลัมน์สำหรับข้อมูลการโอนเงินผ่านธนาคาร
     ADD COLUMN `bank_transfer_enabled` ENUM('0','1') NOT NULL DEFAULT '0' COMMENT 'Enable/Disable Bank Transfer' AFTER `deleted`,

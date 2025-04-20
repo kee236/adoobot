@@ -1,3 +1,83 @@
+<?php if (! defined('BASEPATH')) {
+    exit('No direct script access allowed');
+}
+
+/**
+ * @category controller
+ * class home
+ */
+
+class Home extends CI_Controller
+{
+
+    /**
+     * load constructor
+     * @access public
+     * @return void
+     */
+    public $using_media_type = '';
+    public $module_access;
+    public $team_access = [];
+    public $language;
+    public $is_rtl;
+    public $user_id;
+    public $real_user_id;
+    public $is_manager = 0;
+    public $team_allowed_pages = [];
+    public $is_demo;
+
+    public $is_ad_enabled;
+    public $is_ad_enabled1;
+    public $is_ad_enabled2;
+    public $is_ad_enabled3;
+    public $is_ad_enabled4;
+
+    public $ad_content1;
+    public $ad_content1_mobile;
+    public $ad_content2;
+    public $ad_content3;
+    public $ad_content4;
+    public $app_product_id;
+    public $APP_VERSION;
+    public $strict_ajax_call = true;
+
+
+    public function __construct()
+    {
+        parent::__construct();
+        set_time_limit(0);
+        $this->load->helpers(array('my_helper', 'addon_helper', 'bot_helper'));
+
+        $is_rtl = $this->config->item("is_rtl");
+        if (!empty($is_rtl) && $is_rtl == '1') $this->is_rtl = TRUE;
+        else $this->is_rtl = FALSE;
+
+        $is_demo = $this->config->item("is_demo");
+        if ($is_demo == "") $is_demo = "0";
+        $this->is_demo = $is_demo;
+
+        $this->language = "";
+        $this->_language_loader();
+
+        $this->is_ad_enabled = false;
+        $this->is_ad_enabled1 = false;
+        $this->is_ad_enabled2 = false;
+        $this->is_ad_enabled3 = false;
+        $this->is_ad_enabled4 = false;
+
+        $this->ad_content1 = "";
+        $this->ad_content1_mobile = "";
+        $this->ad_content2 = "";
+        $this->ad_content3 = "";
+        $this->ad_content4 = "";
+        $this->app_product_id = 28;
+        $this->APP_VERSION = "";
+
+        $this->using_media_type = get_media_type();
+
+        ignore_user_abort(TRUE);
+
+        $seg = $this->uri->segment(2);
 
     // 1. Optimize Installation Check
     $excluded_segments = ["installation", "installation_action", "central_webhook_callback", "webhook_callback_main"];

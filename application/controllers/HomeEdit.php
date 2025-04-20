@@ -30,3 +30,68 @@
                 'Europe/London' => '(GMT+0:00) Europe/London (British Summer Time)', // ตัวอย่างเขตเวลา Europe
             );
     }
+
+
+
+    protected function get_country_names()
+    {
+        $countries = $this->get_country_iso_phone_currecncy('country');
+        $country_dropdown = array("" => $this->lang->line("Select Country"));
+        foreach ($countries as $iso => $name) {
+            $flag_path = base_url("assets/img/flag/" . strtolower($iso) . ".png");
+            $country_dropdown[$iso] = '<img src="' . $flag_path . '" style="width: 24px; height: 16px; margin-right: 5px; vertical-align: middle;">' . $name;
+        }
+        return $country_dropdown;
+    }
+
+    protected function get_language_names()
+    {
+        $array_languages = array(
+            'ar-XA' => 'Arabic',
+            'bg' => 'Bulgarian',
+            'hr' => 'Croatian',
+            'cs' => 'Czech',
+            'da' => 'Danish',
+            'de' => 'German',
+            'el' => 'Greek',
+            'en' => 'English',
+            'et' => 'Estonian',
+            'es' => 'Spanish',
+            'fi' => 'Finnish',
+            'fr' => 'French',
+            'in' => 'Indonesian',
+            'ga' => 'Irish',
+            'hi' => 'Hindi', // แก้ไขจาก 'hr' เป็น 'hi'
+            'hu' => 'Hungarian',
+            'he' => 'Hebrew',
+            'it' => 'Italian',
+            'ja' => 'Japanese',
+            'ko' => 'Korean',
+            'lv' => 'Latvian',
+            'lt' => 'Lithuanian',
+            'nl' => 'Dutch',
+            'no' => 'Norwegian',
+            'pl' => 'Polish',
+            'pt' => 'Portuguese',
+            'sv' => 'Swedish',
+            'ro' => 'Romanian',
+            'ru' => 'Russian',
+            'sr-CS' => 'Serbian',
+            'sk' => 'Slovak',
+            'sl' => 'Slovenian',
+            'th' => 'Thai',
+            'tr' => 'Turkish',
+            'uk-UA' => 'Ukrainian',
+            'zh-chs' => 'Chinese (Simplified)',
+            'zh-cht' => 'Chinese (Traditional)'
+        );
+
+        $language_dropdown = array("" => $this->lang->line("Select Language"));
+        foreach ($array_languages as $code => $name) {
+            // สร้างชื่อไฟล์ไอคอนธงชาติจากโค้ดภาษา (อาจต้องปรับตามมาตรฐานชื่อไฟล์ของคุณ)
+            $flag_code = strtolower(substr($code, 0, 2));
+            $flag_path = base_url("assets/img/flag/" . $flag_code . ".png");
+            $language_dropdown[$code] = '<img src="' . $flag_path . '" style="width: 24px; height: 16px; margin-right: 5px; vertical-align: middle;">' . $name;
+        }
+        return $language_dropdown;
+    }

@@ -1,6 +1,74 @@
 
+    // 1. Optimize Installation Check
+    $excluded_segments = ["installation", "installation_action", "central_webhook_callback", "webhook_callback_main"];
+    if (!in_array($this->uri->segment(2), $excluded_segments) && file_exists(APPPATH . 'install.txt')) {
+        redirect('home/installation', 'location');
+    }
+
+    if ($seg != "installation" && $seg != "installation_action") {
+        // ... logic อื่นๆ ...
+
+        // 4. Session Usage
+        $user_id = $this->session->userdata('user_id');
+        $real_user_id = $this->session->userdata('real_user_id');
+        $is_manager = $this->session->userdata('is_manager');
+
+        if ($this->session->userdata('logged_in') == 1) {
+            $this->load->database(); // 2. Conditional Database Loading
+            $package_info = $is_manager == 1 ? $this->session->userdata("role_info") : $this->session->userdata("package_info");
+            // ...
+        }
+
+        // 5. Affiliate Cookie Security
+        $this->load->helper('cookie');
+        $affiliateid = $this->input->get('ref', TRUE); // Sanitize input
+        if ($affiliateid) {
+            $visitor_cookie = array(
+                "name" => "affiliate_id",
+                "value" => $affiliateid,
+                "expire" => 604800
+            );
+            set_cookie($visitor_cookie);
+
+            $aff_id = (int)$affiliateid; // Or just use $affiliateid if no specific conversion needed
+            $visitorip = $this->input->ip_address(); // CodeIgniter's method for IP
+            $this->basic->insert_data("affiliate_visitors_action", ['affiliate_id' => $aff_id, 'type' => 'click', 'ip_address' => $visitorip, 'clicked_time' => date("Y-m-d H:i:s")]);
+        }
+
+        // 6. HTTPS Enforcement
+        if ($this->config->item('force_https') == '1') {
+            force_https(); // CodeIgniter's function
+        }
+
+        // 7. CSRF Token (Enable in config.php)
+        if ($this->session->userdata('csrf_token_session') == "") {
+            $this->session->set_userdata('csrf_token_session', bin2hex(random_bytes(32))); // Consider CodeIgniter's CSRF
+        }
+    }
 
 
+function handle_cors() {
+    $allowed_origins = ['https://ismartai.com', 'https://api.ismartai.com'];
+    $allowed_methods = ['GET', 'POST', 'OPTIONS'];
+    $allowed_headers = ['X-Requested-With', 'Content-Type', 'Authorization'];
+
+    if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+        header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
+        header('Access-Control-Allow-Methods: ' . implode(', ', $allowed_methods));
+        header('Access-Control-Allow-Headers: ' . implode(', ', $allowed_headers));
+        header('Access-Control-Allow-Credentials: true'); // ถ้าใช้ cookies
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+        http_response_code(200);
+        exit;
+    }
+}
+
+// ใน controller:
+handle_cors();
+
+// ... โค้ด API ...
 
 
     public function _time_zone_list()

@@ -1,3 +1,19 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+// ...
+$config['language'] = 'thai';
+$config['time_reference'] = 'Asia/Bangkok';
+$config['log_date_format'] = 'Y-m-d H:i:s';
+$config['charset'] = 'UTF-8';
+$config['base_url'] = 'http:                
+$config['encryption_key'] = '00999';
+// ...
+?>
+
+
+
+
 <?php  if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 
 /*

@@ -1,4 +1,9 @@
 <?php 
+
+$config['social_media_recommendation'] = 'การใช้ social media สามารถช่วยเพิ่มการเข้าชมเว็บไซต์และเพิ่มโอกาสในการได้รับการแชร์และพูดถึงบนอินเทอร์เน็ต';
+$config['mobile_friendly_recommendation'] = 'การใช้ mobile-friendly สามารถช่วยให้เว็บไซต์ของคุณสามารถเข้าถึงได้ง่ายบนอุปกรณ์เคลื่อนที่และเพิ่มโอกาสในการได้รับการเข้าชม';
+
+
 $config['page_title_recommendation'] = 'Title is the heading of the webpage. The sentence or string enclosed between html title tag (<title></title>) is the title of your website. Search engines searches for the title of your website and displays title along with your website address on search result. Title is the most important element for both SEO and social sharing. Title should be less than 50 to 60 characters because search engine typically displays this length of string or sentence on search result. A good title can consist the primary keyword, secondary keyword and brand name. For example a fictitious gaming information providing sites title may be like "the future of gaming information is here".  A webpage title should contain a proper glimpse of the website. title is important element as an identification of your website for user experience, SEO and social sharing. So have a nice and catching title. <br/> <a href="https://moz.com/learn/seo/title-tag" target="_BLANK"> <i class="fa fa-hand-o-right"></i> Learn more</a>';
 
 

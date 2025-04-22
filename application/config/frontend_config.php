@@ -1,6 +1,5 @@
 <?php 
 
-<?php
 $config['theme_front'] = 'purple';
 $config['display_landing_page'] = '1';
 $config['facebook'] = 'https:                     

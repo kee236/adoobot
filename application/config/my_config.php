@@ -1,4 +1,20 @@
-<?php 
+<?php
+$config['default_page_url'] = 'page/blank';
+$config['product_name'] = 'ismartAi';
+$config['product_short_name'] = 'ismartAi';
+$config['product_version'] = '1.0.0';
+$config['slogan'] = 'ระบบแชทบอท การตลาด อัจฉริยะ จัดการร้านค้าอัตโนมัติ ครบวงจร';
+$config['institute_address1'] = 'ที่อยู่ของบริษัท';
+$config['institute_address2'] = '';
+$config['institute_email'] = 'อีเมลของบริษัท';
+$config['institute_mobile'] = 'เบอร์โทรศัพท์ของบริษัท';
+$config['time_zone'] = 'Asia/Bangkok';
+$config['language'] = 'thai';
+// ...
+
+
+
+/*
 $config['default_page_url'] = 'page/blank';
 $config['product_name'] = 'ChatPion';
 $config['product_short_name'] = 'ChatPion';
@@ -12,6 +28,8 @@ $config['institute_mobile'] = '';
 
 $config['time_zone'] = 'Europe/Dublin';
 $config['language'] = 'english';
+*/
+
 
 $config['facebook_poster_image_upload_limit'] = '2';
 $config['facebook_poster_video_upload_limit'] = '15';

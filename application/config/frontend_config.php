@@ -1,4 +1,69 @@
 <?php 
+
+<?php
+$config['theme_front'] = 'purple';
+$config['display_landing_page'] = '1';
+$config['facebook'] = 'https:                     
+$config['instagram'] = 'https://www.instagram.com/';
+$config['twitter'] = 'https:                
+$config['tiktok'] = 'https://www.tiktok.com/';
+$config['line'] = 'https:            
+$config['youtube'] = 'https://www.youtube.com/';
+$config['display_review_block'] = '1';
+$config['display_video_block'] = '1';
+// ...
+
+
+$config['customer_review'] = array(
+    '0'=> array(
+        'นายเอ',
+        'เจ้าของธุรกิจ',
+        'assets/site_new/img/client/thumb-1.jpg',
+        'ระบบแชทบอทของ ismartAi ช่วยให้ธุรกิจของฉันเติบโตได้อย่างรวดเร็วและมีประสิทธิภาพ',
+    ),
+    '1'=> array(
+        'นางสาวบี',
+        'นักการตลาด',
+        'assets/site_new/img/client/thumb-2.jpg',
+        'ismartAi เป็นเครื่องมือที่ยอดเยี่ยมสำหรับการตลาดดิจิทัล',
+    ),
+    '2'=> array(
+        'นายซี',
+        'เจ้าของร้านค้า',
+        'assets/site_new/img/client/thumb-3.jpg',
+        'ระบบจัดการร้านค้าอัตโนมัติของ ismartAi ช่วยให้ฉันสามารถจัดการร้านค้าได้อย่างง่ายดาย',
+    ),
+);
+
+
+
+
+$config['custom_video'] = array(
+    '0'=>array(
+        'assets/site_new/img/tutorial/blog-1.jpg',
+        'แนะนำระบบแชทบอทของ ismartAi',
+        'https:                                       
+    ),
+    '1'=>array(
+        'assets/site_new/img/tutorial/blog-2.jpg',
+        'วิธีการใช้ระบบจัดการร้านค้าอัตโนมัติของ ismartAi',
+        'https://www.youtube.com/watch?v=OObcKRImhi0',
+    ),
+    '2'=>array(
+        'assets/site_new/img/tutorial/blog-3.jpg',
+        'แนะนำฟีเจอร์ใหม่ของ ismartAi',
+        'https://www.youtube.com/watch?v=OObcKRImhi0',
+    ),
+);
+
+
+
+
+/*
+
+
+
+
 $config['theme_front'] = 'purple';
 $config['display_landing_page'] = '1';
 $config['facebook'] = 'https://www.facebook.com/';
@@ -53,3 +118,5 @@ $config['custom_video'] = array(
    ),
 
 );
+
+*/

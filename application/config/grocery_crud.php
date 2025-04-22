@@ -13,7 +13,7 @@ $config['grocery_crud_file_upload_max_file_size'] = '20MB';
 
 
 
-<?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
+<?php /* if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 	//For view all the languages go to the folder assets/grocery_crud/languages/
 	$CI =& get_instance();
 	$config['grocery_crud_default_language']	= $CI->language;
@@ -43,3 +43,4 @@ $config['grocery_crud_file_upload_max_file_size'] = '20MB';
 	//Having some options at the list paging. This is the default one that all the websites are using.
 	//Make sure that the number of grocery_crud_default_per_page variable is included to this array.
 	$config['grocery_crud_paging_options'] = array('5','10','15','25','50','100');
+*/

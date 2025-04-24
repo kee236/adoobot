@@ -181,17 +181,17 @@ function addon_exist($module_id=0,$addon_unique_name=""){
     /* Check if the memeber have the module access*/
     if(in_array($module_id,$module_acces))
          $is_module_access=1; 
-        
+        */
     /**Check if the addon is installed **/
-    $where['where']=array("unique_name"=>$addon_unique_name);
+   /* $where['where']=array("unique_name"=>$addon_unique_name);
     $addon_info = $ci->basic->get_data("add_ons", $where);
     
     if(isset($addon_info[0]['id']))
          $is_addon_installed=1; 
         
-        
+        */
     /**If admin and have module installed, then return true***/
-    if($ci->session->userdata("user_type")=="Admin" && $is_addon_installed==1)
+   /* if($ci->session->userdata("user_type")=="Admin" && $is_addon_installed==1)
         return TRUE;
     /**If member and have module installed and have module access, then true***/
     if($ci->session->userdata("user_type")=="Member" && $is_addon_installed==1 && $is_module_access==1)

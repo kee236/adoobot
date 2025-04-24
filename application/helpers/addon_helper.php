@@ -134,7 +134,36 @@ function get_addon_asset($type,$asset_path,$css_class,$css_id,$style)
 }
 
 
+function addon_exist($module_id=0,$addon_unique_name=""){
 
+    if($module_id==0 || $addon_unique_name=="")  return FALSE;
+
+    $ci = &get_instance();
+    $ci->load->model('basic');  
+
+    $is_addon_installed=0; // Initially ad on not installed
+
+    /**Check if the addon is installed **/
+    $where['where']=array("unique_name"=>$addon_unique_name);
+    $addon_info = $ci->basic->get_data("add_ons", $where);
+
+    if(isset($addon_info[0]['id']))
+         $is_addon_installed=1; 
+
+
+    /**If admin, then return true.  No need to check module or installation.**/
+    if($ci->session->userdata("user_type")=="Admin")
+        return TRUE;
+    /**If member and have module installed and have module access, then true***/
+    if($ci->session->userdata("user_type")=="Member" && $is_addon_installed==1)
+        return TRUE;
+
+    return FALSE;
+}
+
+
+
+/*
 function addon_exist($module_id=0,$addon_unique_name=""){
     
     if($module_id==0 || $addon_unique_name=="")  return FALSE;
@@ -171,6 +200,7 @@ function addon_exist($module_id=0,$addon_unique_name=""){
     return FALSE;
 }
 
+*/
 
 function xit_load_images($path='')
 {

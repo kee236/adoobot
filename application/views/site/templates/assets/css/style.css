@@ -1,0 +1,401 @@
+/* assets/css/style.css */
+
+/* 1. การตั้งค่าพื้นฐานและ CSS Variables */
+:root {
+  --primary-color: #00A99D; /* Teal */
+  --secondary-color: #8B5CF6; /* Purple */
+  --primary-color-light: #E6FFFA; /* สีหลักแบบจาง */
+  --secondary-color-light: #F5F3FF; /* สีรองแบบจาง */
+
+  --text-dark: #1F2937;
+  --text-medium: #6B7280;
+  --text-light: #FFFFFF;
+
+  --bg-white: #FFFFFF;
+  --bg-light: #F9FAFB;
+  --bg-dark: #111827; /* สำหรับ Footer */
+
+  --border-color: #E5E7EB;
+
+  --font-family-sans: 'Prompt', sans-serif; /* ใช้ Prompt */
+
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+body {
+  font-family: var(--font-family-sans);
+  color: var(--text-dark);
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-white);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700; /* Bold */
+  color: var(--text-dark);
+  margin-top: 0;
+  margin-bottom: 0.5em;
+}
+
+h1 { font-size: 2.5rem; /* ~40px */ } /* ปรับขนาดตามความเหมาะสม */
+h2 { font-size: 2rem;   /* ~32px */ }
+h3 { font-size: 1.5rem; /* ~24px */ font-weight: 600; /* SemiBold */}
+
+p {
+  margin-bottom: 1em;
+}
+
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+a:hover {
+  color: #007A70; /* Darker Teal */
+  text-decoration: underline;
+}
+
+/* 2. Utility Classes (ตัวอย่าง) */
+.container {
+  width: 90%;
+  max-width: 1140px; /* หรือ 1280px */
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+.text-center { text-align: center; }
+.text-primary { color: var(--primary-color); }
+.text-secondary { color: var(--text-medium); }
+.text-light { color: var(--text-light); }
+
+.bg-light { background-color: var(--bg-light); }
+.bg-dark { background-color: var(--bg-dark); }
+.bg-primary-light { background-color: var(--primary-color-light); }
+.bg-gradient-primary {
+  background: linear-gradient(135deg, var(--primary-color), #4FD1C5); /* Teal Gradient Example */
+}
+
+.section-padding {
+  padding-top: 60px;
+  padding-bottom: 60px;
+}
+
+.section-title {
+  margin-bottom: 40px; /* ระยะห่างใต้หัวข้อ Section */
+}
+
+/* 3. ปุ่ม (Buttons) */
+.btn {
+  display: inline-block;
+  padding: 12px 24px;
+  font-size: 1rem; /* 16px */
+  font-weight: 600; /* SemiBold */
+  border: none;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.3s ease;
+  text-decoration: none !important; /* Ensure no underline */
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: var(--text-light);
+}
+.btn-primary:hover {
+  background-color: #007A70; /* Darker Teal */
+  color: var(--text-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+  background-color: var(--secondary-color);
+  color: var(--text-light);
+}
+.btn-secondary:hover {
+  background-color: #6D28D9; /* Darker Purple */
+  color: var(--text-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-outline-light {
+    background-color: transparent;
+    color: var(--text-light);
+    border: 2px solid var(--text-light);
+}
+.btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-light);
+}
+
+/* เพิ่มสไตล์สำหรับขนาดปุ่ม .btn-lg */
+.btn-lg {
+    padding: 15px 30px;
+    font-size: 1.1rem;
+}
+
+
+/* 4. การ์ด (Cards) */
+.card {
+  background-color: var(--bg-white);
+  border-radius: var(--border-radius-lg);
+  padding: 25px;
+  box-shadow: var(--shadow-md);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+
+
+/* 5. Header / Navbar */
+.site-header {
+  padding: 15px 0;
+  background-color: var(--bg-white);
+  box-shadow: var(--shadow-md);
+  position: sticky; /* ทำให้ Header ติดตามการ Scroll */
+  top: 0;
+  z-index: 1000;
+}
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.navbar-brand .logo {
+  height: 40px; /* ปรับขนาดโลโก้ตามต้องการ */
+}
+.navbar-nav {
+  list-style: none;
+  display: flex;
+  padding: 0;
+  margin: 0;
+}
+.navbar-nav li {
+  margin-left: 25px;
+}
+.nav-link {
+  color: var(--text-dark);
+  font-weight: 500; /* Medium */
+  text-decoration: none;
+  padding-bottom: 5px;
+  border-bottom: 2px solid transparent; /* เตรียมพื้นที่สำหรับ hover */
+}
+.nav-link:hover, .nav-link.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+.navbar-actions .btn {
+  margin-left: 10px;
+}
+.mobile-menu-toggle { /* ซ่อนปุ่ม mobile menu บน Desktop */
+  display: none;
+}
+/* (เพิ่ม Media Queries สำหรับ Mobile Menu) */
+
+
+/* 6. Hero Section */
+.hero-section {
+  padding-top: 80px; /* เพิ่ม padding ด้านบน */
+  padding-bottom: 80px;
+  color: var(--text-light); /* สีตัวหนังสือสำหรับพื้นหลัง Gradient */
+}
+.hero-title {
+  font-size: 3rem; /* ใหญ่ขึ้น */
+  margin-bottom: 20px;
+  color: var(--text-light);
+}
+.hero-subtitle {
+  font-size: 1.2rem;
+  margin-bottom: 30px;
+  color: rgba(255, 255, 255, 0.9); /* สีขาวโปร่งแสงเล็กน้อย */
+  max-width: 600px; /* จำกัดความกว้าง subtitle */
+  margin-left: auto;
+  margin-right: auto;
+}
+.hero-actions .btn {
+  margin: 0 10px;
+}
+.hero-platforms {
+  margin-top: 40px;
+}
+.hero-platforms p {
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+.platform-icon {
+  height: 30px; /* ขนาดไอคอนแพลตฟอร์ม */
+  margin: 0 8px;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+.platform-icon:hover {
+    opacity: 1;
+}
+.hero-image-container {
+    margin-top: 50px;
+}
+.hero-image {
+    max-width: 80%; /* ปรับขนาดภาพประกอบ */
+    height: auto;
+}
+/* เพิ่ม Animation สำหรับ Hero Image ถ้าต้องการ */
+
+
+/* 7. Key Features Section */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Responsive Grid */
+  gap: 30px;
+}
+.feature-icon-wrapper {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.feature-icon {
+    width: 30px;
+    height: 30px;
+}
+.icon-primary {
+    filter: invert(48%) sepia(87%) saturate(1352%) hue-rotate(145deg) brightness(90%) contrast(101%); /* ทำให้ไอคอนเป็นสี primary */
+    /* หรือใช้ SVG ที่มีสีอยู่แล้ว */
+}
+.feature-title {
+  font-size: 1.25rem; /* 20px */
+  margin-bottom: 10px;
+}
+.feature-description {
+    font-size: 0.95rem;
+    color: var(--text-medium);
+    margin-bottom: 15px;
+}
+.learn-more-link {
+    font-weight: 600;
+    text-decoration: none;
+}
+.learn-more-link:hover {
+    text-decoration: underline;
+}
+
+
+/* 8. Integrations Section */
+.integration-logos {
+    margin-top: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+}
+.integration-logo {
+    height: 40px; /* ปรับขนาดโลโก้ */
+    opacity: 0.7;
+    filter: grayscale(100%);
+    transition: all 0.3s ease;
+}
+.integration-logo:hover {
+    opacity: 1;
+    filter: grayscale(0%);
+    transform: scale(1.1);
+}
+
+/* (เพิ่มสไตล์สำหรับ Section อื่นๆ ที่เหลือ เช่น Why Choose Us, Pricing, Support, Newsletter, Footer) */
+
+/* 9. Footer */
+.site-footer {
+    padding-top: 60px;
+    padding-bottom: 30px;
+}
+.footer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+    margin-bottom: 40px;
+}
+.footer-logo {
+    height: 30px;
+    margin-bottom: 15px;
+    opacity: 0.8;
+}
+.footer-tagline {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 15px;
+}
+.footer-social-links a {
+    margin-right: 10px;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+.footer-social-links a:hover {
+    opacity: 1;
+}
+.footer-social-links img {
+    height: 24px;
+    filter: brightness(0) invert(1); /* ทำให้ไอคอนเป็นสีขาว */
+}
+.footer-heading {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-bottom: 15px;
+}
+.footer-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.footer-links li {
+    margin-bottom: 10px;
+}
+.footer-links a {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+}
+.footer-links a:hover {
+    color: var(--text-light);
+    text-decoration: underline;
+}
+.footer-bottom {
+    text-align: center;
+    padding-top: 30px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* 10. Responsive (ตัวอย่าง) */
+@media (max-width: 768px) {
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.75rem; }
+
+  .navbar-nav { display: none; /* ซ่อนเมนูหลักบน Mobile */ }
+  .navbar-actions .btn-secondary { display: none; /* อาจซ่อนปุ่มรอง */ }
+  .mobile-menu-toggle { display: block; /* แสดงปุ่ม Mobile Menu */ }
+  /* (เพิ่ม CSS สำหรับแสดง Mobile Menu เมื่อคลิก) */
+
+  .features-grid {
+      grid-template-columns: 1fr; /* ให้ฟีเจอร์เรียงต่อกันแนวตั้ง */
+  }
+  .footer-grid {
+      grid-template-columns: 1fr; /* Footer คอลัมน์เดียว */
+      text-align: center;
+  }
+  .footer-column { margin-bottom: 30px; }
+}

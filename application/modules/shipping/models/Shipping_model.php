@@ -1,0 +1,92 @@
+<?php
+// application/modules/shipping/models/Shipping_model.php
+
+class Shipping_model extends CI_Model
+{
+    public function __construct()
+    {
+        parent::__construct();
+        $this->load->database();
+    }
+
+    /**
+     * บันทึกรายการจัดส่งใหม่
+     * @param array $data ข้อมูลรายการจัดส่ง
+     * @return int|bool ID ของรายการที่บันทึก หรือ false ถ้าผิดพลาด
+     */
+    public function create_shipment_record(array $data)
+    {
+        $this->db->insert('shipping_transactions', $data);
+        return $this->db->insert_id();
+    }
+
+    /**
+     * อัปเดตสถานะการจัดส่ง
+     * @param string $tracking_id เลขติดตามพัสดุ
+     * @param string $status สถานะใหม่ (e.g., 'pending', 'in_transit', 'delivered', 'failed')
+     * @param array $update_data ข้อมูลอื่นๆ ที่ต้องการอัปเดต
+     * @return bool
+     */
+    public function update_shipment_status(string $tracking_id, string $status, array $update_data = [])
+    {
+        $this->db->where('tracking_id', $tracking_id);
+        $this->db->update('shipping_transactions', array_merge(['status' => $status, 'last_updated' => date('Y-m-d H:i:s')], $update_data));
+        return $this->db->affected_rows() > 0;
+    }
+
+    /**
+     * ดึงข้อมูลรายการจัดส่งด้วย Tracking ID
+     * @param string $tracking_id
+     * @return array|null
+     */
+    public function get_shipment_by_tracking_id(string $tracking_id)
+    {
+        return $this->db->get_where('shipping_transactions', ['tracking_id' => $tracking_id])->row_array();
+    }
+
+    /**
+     * ดึงรายการจัดส่งทั้งหมด
+     * @param int $user_id (Optional) ถ้าต้องการดึงเฉพาะของผู้ใช้คนใดคนหนึ่ง
+     * @return array
+     */
+    public function get_all_shipments(int $user_id = null)
+    {
+        if ($user_id) {
+            $this->db->where('user_id', $user_id);
+        }
+        $this->db->order_by('created_at', 'DESC');
+        return $this->db->get('shipping_transactions')->result_array();
+    }
+
+    /**
+     * บันทึก/อัปเดตข้อมูล Config ของ Shipping Gateway (เช่น API Key, Secret)
+     * @param string $gateway_name ชื่อ Gateway (e.g., 'kerry_express')
+     * @param array $config_data ข้อมูล Config
+     * @return bool
+     */
+    public function save_shipping_gateway_config(string $gateway_name, array $config_data)
+    {
+        $this->db->where('gateway_name', $gateway_name);
+        $exists = $this->db->get('shipping_gateway_config')->num_rows();
+
+        if ($exists) {
+            $this->db->where('gateway_name', $gateway_name);
+            return $this->db->update('shipping_gateway_config', ['config_data' => json_encode($config_data), 'last_updated' => date('Y-m-d H:i:s')]);
+        } else {
+            return $this->db->insert('shipping_gateway_config', ['gateway_name' => $gateway_name, 'config_data' => json_encode($config_data), 'created_at' => date('Y-m-d H:i:s')]);
+        }
+    }
+
+    /**
+     * ดึงข้อมูล Config ของ Shipping Gateway
+     * @param string $gateway_name
+     * @return array|null
+     */
+    public function get_shipping_gateway_config(string $gateway_name)
+    {
+        $result = $this->db->get_where('shipping_gateway_config', ['gateway_name' => $gateway_name])->row_array();
+        return $result ? json_decode($result['config_data'], true) : null;
+    }
+
+    // อาจจะมีฟังก์ชันอื่นๆ เช่น การบันทึก Tracking Events ย่อยๆ
+}

@@ -1,0 +1,1 @@
+thai/thai_lang.php

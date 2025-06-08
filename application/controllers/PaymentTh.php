@@ -1,3 +1,4 @@
+<?PHP 
 // application/controllers/Home.php (หรือ Payment.php)
 
 public function payment_status($status_code = 'unknown')

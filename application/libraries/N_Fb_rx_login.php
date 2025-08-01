@@ -1,9 +1,866 @@
-
-
-
-
-
 <?php
+// ส่วนต่อจากเดิมสำหรับคลาส Fb_rx_login
+// ไม่ต้อง include("Facebook/autoload.php") แล้ว เพราะ Composer จัดการการโหลดอัตโนมัติ
+use Facebook\Facebook;
+use Facebook\Exceptions\FacebookResponseException;
+use Facebook\Exceptions\FacebookSDKException;
+
+// คลาส Fb_rx_login (ต่อจากไฟล์เดิม)
+class Fb_rx_login
+{
+    // ... คุณสมบัติและ Constructor จากส่วนก่อนหน้า (fb1.1, fb1.2) ...
+
+    protected $CI;
+    public $app_id;
+    public $app_secret;
+    public $user_access_token;
+    public $fb;
+    public $default_graph_version;
+
+    private $encrypt_method = "AES-256-CBC";
+    private $secret_key;
+    private $secret_iv;
+
+    function __construct()
+    {
+        $this->CI =& get_instance();
+        $this->CI->load->database();
+        $this->CI->load->helper('url');
+        $this->CI->load->helper('my_helper'); // helper ที่กำหนดเองของคุณ (รวมถึง spintax_process และ get_domain_only)
+        $this->CI->load->library('session');
+
+        $this->CI->load->model('basic');
+
+        $this->secret_key = getenv('FB_ENCRYPT_SECRET_KEY') ?: 't8Mk8fsJMnFw69FGG5';
+        $this->secret_iv = getenv('FB_ENCRYPT_SECRET_IV') ?: '9fljzKxZmMmoT358yZ';
+
+        $this->default_graph_version = getenv('FB_GRAPH_VERSION') ?: 'v23.0';
+
+        $this->database_id = $this->CI->session->userdata("fb_rx_login_database_id");
+
+        if ($this->CI->session->userdata("social_login_session_set") == 1) {
+            $facebook_config = $this->CI->basic->get_data("facebook_rx_config", array("where" => array("status" => "1"), 'select' => '', 'join' => '', 'limit' => 1, 'start' => NULL, 'order_by' => rand()));
+
+            if (empty($facebook_config)) {
+                $this->database_id = '';
+            } else {
+                $config_id = isset($facebook_config[0]) ? $facebook_config[0]['id'] : 0;
+                $this->database_id = $config_id;
+                $this->CI->session->unset_userdata('social_login_session_set');
+                $this->CI->session->set_userdata('return_configid_used_for_social_login', $config_id);
+            }
+        }
+
+        if ($this->database_id != '') {
+            $facebook_config = $this->CI->basic->get_data("facebook_rx_config", array("where" => array("id" => $this->database_id)));
+            if (isset($facebook_config[0])) {
+                $config_data = $facebook_config[0];
+
+                if (isset($config_data['developer_access']) && $config_data['developer_access'] == '1') {
+                    $key = hash('sha256', $this->secret_key);
+                    $iv = substr(hash('sha256', $this->secret_iv), 0, 16);
+                    $this->app_id = openssl_decrypt(base64_decode($config_data["api_id"]), $this->encrypt_method, $key, 0, $iv);
+                    $this->app_secret = openssl_decrypt(base64_decode($config_data["api_secret"]), $this->encrypt_method, $key, 0, $iv);
+                } else {
+                    $this->app_id = $config_data["api_id"];
+                    $this->app_secret = $config_data["api_secret"];
+                }
+                $this->user_access_token = $config_data["user_access_token"];
+
+                $this->initialize_facebook_sdk($this->app_id, $this->app_secret);
+
+            } else {
+                $this->fallback_to_env_config();
+            }
+        } else {
+            $this->fallback_to_env_config();
+        }
+    }
+
+    private function fallback_to_env_config()
+    {
+        $env_app_id = getenv('FB_APP_ID');
+        $env_app_secret = getenv('FB_APP_SECRET');
+
+        if ($env_app_id && $env_app_secret) {
+            $this->app_id = $env_app_id;
+            $this->app_secret = $env_app_secret;
+            $this->user_access_token = null;
+            $this->initialize_facebook_sdk($this->app_id, $this->app_secret);
+        } else {
+            $this->fb = null;
+            error_log("Facebook SDK: ไม่พบการตั้งค่า App ID และ Secret (ทั้งจาก DB และ .env)");
+        }
+    }
+
+    private function initialize_facebook_sdk($app_id, $app_secret)
+    {
+        if (empty($app_id) || empty($app_secret)) {
+            error_log("Facebook SDK: App ID หรือ Secret ว่างเปล่า ไม่สามารถเริ่มต้น SDK ได้");
+            $this->fb = null;
+            return;
+        }
+
+        try {
+            $this->fb = new Facebook([
+                'app_id' => $app_id,
+                'app_secret' => $app_secret,
+                'default_graph_version' => $this->default_graph_version,
+                'fileUpload' => true
+            ]);
+        } catch (FacebookSDKException $e) {
+            error_log("Facebook SDK Initialization Error: " . $e->getMessage());
+            $this->fb = null;
+        }
+    }
+
+    public function app_initialize($fb_rx_login_database_id)
+    {
+        $this->database_id = $fb_rx_login_database_id;
+        $facebook_config = $this->CI->basic->get_data("facebook_rx_config", array("where" => array("id" => $this->database_id)));
+
+        if (isset($facebook_config[0])) {
+            $config_data = $facebook_config[0];
+
+            if (isset($config_data['developer_access']) && $config_data['developer_access'] == '1') {
+                $key = hash('sha256', $this->secret_key);
+                $iv = substr(hash('sha256', $this->secret_iv), 0, 16);
+                $this->app_id = openssl_decrypt(base64_decode($config_data["api_id"]), $this->encrypt_method, $key, 0, $iv);
+                $this->app_secret = openssl_decrypt(base64_decode($config_data["api_secret"]), $this->encrypt_method, $key, 0, $iv);
+            } else {
+                $this->app_id = $config_data["api_id"];
+                $this->app_secret = $config_data["api_secret"];
+            }
+            $this->user_access_token = $config_data["user_access_token"];
+
+            $this->initialize_facebook_sdk($this->app_id, $this->app_secret);
+        } else {
+            $this->fb = null;
+            throw new Exception("ไม่พบการตั้งค่า Facebook app ID: {$fb_rx_login_database_id}");
+        }
+    }
+
+    function login_for_user_access_token($redirect_url = "", $additional_permissions = [])
+    {
+        if ($this->fb === null) {
+            throw new Exception("Facebook SDK ไม่ได้เริ่มต้น กรุณาตรวจสอบ App ID หรือ Secret.");
+        }
+
+        $redirect_url = rtrim($redirect_url, '/');
+        $helper = $this->fb->getRedirectLoginHelper();
+
+        $permissions = [
+            'email', 'pages_manage_posts', 'pages_manage_engagement',
+            'pages_manage_metadata', 'pages_read_engagement', 'pages_show_list',
+            'pages_messaging', 'public_profile', 'read_insights', 'business_management'
+        ];
+
+        if ($this->CI->config->item('instagram_reply_enable_disable') == '1') {
+            array_push($permissions, 'instagram_basic', 'instagram_manage_comments', 'instagram_manage_insights', 'instagram_content_publish', 'instagram_manage_messages');
+        }
+
+        $permissions = array_unique(array_merge($permissions, $additional_permissions));
+
+        $loginUrl = $helper->getLoginUrl($redirect_url, $permissions);
+
+        return htmlspecialchars($loginUrl);
+    }
+
+    public function login_callback_without_email($redirect_url = "")
+    {
+        if ($this->fb === null) {
+            return ['status' => '0', 'message' => 'Facebook SDK ไม่ได้เริ่มต้น กรุณาตรวจสอบ App ID หรือ Secret.'];
+        }
+
+        $redirect_url = rtrim($redirect_url, '/');
+        $helper = $this->fb->getRedirectLoginHelper();
+
+        try {
+            $accessToken = $helper->getAccessToken($redirect_url);
+
+            if (!$accessToken) {
+                return ['status' => '0', 'message' => 'ไม่สามารถรับ Access Token ได้ ผู้ใช้อาจปฏิเสธสิทธิ์ หรือ state ไม่ถูกต้อง.'];
+            }
+
+            $longLivedAccessToken = $this->create_long_lived_access_token((string) $accessToken);
+
+            $response = $this->fb->get('/me?fields=id,name', $longLivedAccessToken);
+            $user = $response->getGraphUser()->asArray();
+
+            $user["access_token_set"] = $longLivedAccessToken;
+            $user["status"] = "1";
+            return $user;
+
+        } catch (FacebookResponseException $e) {
+            return ['status' => '0', 'message' => 'Graph API คืนข้อผิดพลาด: ' . $e->getMessage()];
+        } catch (FacebookSDKException $e) {
+            return ['status' => '0', 'message' => 'Facebook SDK คืนข้อผิดพลาด: ' . $e->getMessage()];
+        } catch (Exception $e) {
+            return ['status' => '0', 'message' => 'เกิดข้อผิดพลาดที่ไม่คาดคิด: ' . $e->getMessage()];
+        }
+    }
+
+    public function login_callback($redirect_url = "")
+    {
+        if ($this->fb === null) {
+            return ['status' => '0', 'message' => 'Facebook SDK ไม่ได้เริ่มต้น กรุณาตรวจสอบ App ID หรือ Secret.'];
+        }
+
+        $redirect_url = rtrim($redirect_url, '/');
+        $helper = $this->fb->getRedirectLoginHelper();
+
+        try {
+            $accessToken = $helper->getAccessToken($redirect_url);
+
+            if (!$accessToken) {
+                return ['status' => '0', 'message' => 'ไม่สามารถรับ Access Token ได้ ผู้ใช้อาจปฏิเสธสิทธิ์ หรือ state ไม่ถูกต้อง.'];
+            }
+
+            $longLivedAccessToken = $this->create_long_lived_access_token((string) $accessToken);
+
+            $response = $this->fb->get('/me?fields=id,name,email', $longLivedAccessToken);
+            $user = $response->getGraphUser()->asArray();
+
+            $user["access_token_set"] = $longLivedAccessToken;
+            $user["status"] = "1";
+            return $user;
+
+        } catch (FacebookResponseException $e) {
+            return ['status' => '0', 'message' => 'Graph API คืนข้อผิดพลาด: ' . $e->getMessage()];
+        } catch (FacebookSDKException $e) {
+            return ['status' => '0', 'message' => 'Facebook SDK คืนข้อผิดพลาด: ' . $e->getMessage()];
+        } catch (Exception $e) {
+            return ['status' => '0', 'message' => 'เกิดข้อผิดพลาดที่ไม่คาดคิด: ' . $e->getMessage()];
+        }
+    }
+
+    public function app_id_secret_check()
+    {
+        if (empty($this->app_id) || empty($this->app_secret)) return 'not_configured';
+        return null;
+    }
+
+    function access_token_validity_check()
+    {
+        if ($this->fb === null || !$this->user_access_token) {
+            return false;
+        }
+
+        try {
+            $response = $this->fb->get(
+                '/debug_token?input_token=' . $this->user_access_token,
+                $this->app_id . '|' . $this->app_secret
+            );
+            $debugToken = $response->getGraphNode();
+
+            return $debugToken['is_valid'] && (!$debugToken['expires_at'] || $debugToken['expires_at'] > time());
+
+        } catch (FacebookResponseException $e) {
+            error_log("ข้อผิดพลาดในการตรวจสอบ Access Token (Graph): " . $e->getMessage());
+            return false;
+        } catch (FacebookSDKException $e) {
+            error_log("ข้อผิดพลาดในการตรวจสอบ Access Token (SDK): " . $e->getMessage());
+            return false;
+        }
+    }
+
+    function access_token_validity_check_for_user($access_token)
+    {
+        if ($this->fb === null || !$access_token) {
+            return false;
+        }
+        try {
+            $response = $this->fb->get(
+                '/debug_token?input_token=' . $access_token,
+                $this->app_id . '|' . $this->app_secret
+            );
+            $debugToken = $response->getGraphNode();
+
+            return $debugToken['is_valid'] && (!$debugToken['expires_at'] || $debugToken['expires_at'] > time());
+
+        } catch (FacebookResponseException $e) {
+            error_log("ข้อผิดพลาดในการตรวจสอบ Access Token (Graph สำหรับผู้ใช้): " . $e->getMessage());
+            return false;
+        } catch (FacebookSDKException $e) {
+            error_log("ข้อผิดพลาดในการตรวจสอบ Access Token (SDK สำหรับผู้ใช้): " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function create_long_lived_access_token($short_lived_user_token)
+    {
+        if ($this->fb === null || empty($short_lived_user_token)) {
+            return '';
+        }
+        try {
+            $oAuth2Client = $this->fb->getOAuth2Client();
+            $longLivedAccessToken = $oAuth2Client->getLongLivedAccessToken($short_lived_user_token);
+            return (string) $longLivedAccessToken;
+        } catch (FacebookResponseException $e) {
+            error_log("ข้อผิดพลาดในการสร้าง Long-lived Token (Graph): " . $e->getMessage());
+            return '';
+        } catch (FacebookSDKException $e) {
+            error_log("ข้อผิดพลาดในการสร้าง Long-lived Token (SDK): " . $e->getMessage());
+            return '';
+        }
+    }
+
+    public function facebook_api_call($url)
+    {
+        if ($this->fb === null) {
+            return ['error' => ['message' => 'Facebook SDK ไม่ได้เริ่มต้น.']];
+        }
+
+        $parsed_url = parse_url($url);
+        $path = $parsed_url['path'] ?? '';
+        parse_str($parsed_url['query'] ?? '', $query_params);
+        $access_token_from_url = $query_params['access_token'] ?? $this->user_access_token;
+
+        $method = 'GET';
+
+        try {
+            $response = $this->fb->get($path, $access_token_from_url);
+            return $response->getGraphNode()->asArray();
+        } catch (FacebookResponseException $e) {
+            error_log("ข้อผิดพลาดในการเรียก Facebook API (Graph): " . $e->getMessage());
+            return ['error' => ['message' => $e->getMessage(), 'code' => $e->getCode()]];
+        } catch (FacebookSDKException $e) {
+            error_log("ข้อผิดพลาดในการเรียก Facebook API (SDK): " . $e->getMessage());
+            return ['error' => ['message' => $e->getMessage(), 'code' => $e->getCode()]];
+        }
+    }
+
+    public function get_page_list($access_token = "")
+    {
+        if ($this->fb === null || empty($access_token)) {
+            return ['error' => '1', 'message' => 'Facebook SDK ไม่ได้เริ่มต้น หรือ Access Token หายไป.'];
+        }
+
+        try {
+            $response = $this->fb->get(
+                '/me/accounts?fields=cover,emails,picture,id,name,url,username,access_token,instagram_business_account',
+                $access_token
+            );
+            $pages = $response->getGraphList()->asArray();
+
+            foreach ($pages as $key => $page) {
+                if (isset($page['instagram_business_account']) && isset($page['instagram_business_account']['id'])) {
+                    try {
+                        $ig_response = $this->fb->get(
+                            '/' . $page['instagram_business_account']['id'] . '?fields=username,profile_picture_url',
+                            $page['access_token']
+                        );
+                        $pages[$key]['instagram_business_account_details'] = $ig_response->getGraphNode()->asArray();
+                    } catch (FacebookResponseException $e) {
+                        error_log("ไม่สามารถดึงรายละเอียด IG สำหรับเพจ " . $page['name'] . ": " . $e->getMessage());
+                    } catch (FacebookSDKException $e) {
+                        error_log("ไม่สามารถดึงรายละเอียด IG สำหรับเพจ " . $page['name'] . ": " . $e->getMessage());
+                    }
+                }
+            }
+
+            return $pages;
+
+        } catch (FacebookResponseException $e) {
+            return ['error' => '1', 'message' => 'Graph API คืนข้อผิดพลาด: ' . $e->getMessage()];
+        } catch (FacebookSDKException $e) {
+            return ['error' => '1', 'message' => 'Facebook SDK คืนข้อผิดพลาด: ' . $e->getMessage()];
+        }
+    }
+
+    public function get_page_insight_info($access_token, $metrics, $page_id)
+    {
+        if ($this->fb === null) {
+            throw new Exception("Facebook SDK ไม่ได้เริ่มต้น.");
+        }
+        if (empty($page_id) || empty($metrics) || empty($access_token)) {
+            throw new InvalidArgumentException("Page ID, metrics, หรือ Access Token ว่างเปล่า.");
+        }
+
+        $from = date('Y-m-d', strtotime(date('Y-m-d') . ' -28 day'));
+        $to   = date('Y-m-d', strtotime(date("Y-m-d") . '-1 day'));
+
+        try {
+            $request = $this->fb->get("/{$page_id}/insights?metric={$metrics}&since={$from}&until={$to}", $access_token);
+            $response = $request->getGraphList()->asArray();
+            return $response;
+        } catch (FacebookResponseException $e) {
+            error_log("ข้อผิดพลาดในการดึง Page Insight (Graph): " . $e->getMessage());
+            throw new Exception("ไม่สามารถดึง Page Insight ได้: " . $e->getMessage());
+        } catch (FacebookSDKException $e) {
+            error_log("ข้อผิดพลาดในการดึง Page Insight (SDK): " . $e->getMessage());
+            throw new Exception("ข้อผิดพลาด SDK ในการดึง Page Insight: " . $e->getMessage());
+        }
+    }
+
+    public function get_group_list($access_token = "")
+    {
+        if ($this->fb === null) {
+            throw new Exception("Facebook SDK ไม่ได้เริ่มต้น.");
+        }
+        if (empty($access_token)) {
+            throw new InvalidArgumentException("Access Token ว่างเปล่า.");
+        }
+
+        try {
+            $request = $this->fb->get('/me/groups?fields=cover,picture,id,name&limit=400&admin_only=1', $access_token);
+            $response_group = $request->getGraphList()->asArray();
+            return $response_group;
+        } catch (FacebookResponseException $e) {
+            error_log("ข้อผิดพลาดในการดึงรายการกลุ่ม (Graph): " . $e->getMessage());
+            throw new Exception("ไม่สามารถดึงรายการกลุ่มได้: " . $e->getMessage());
+        } catch (FacebookSDKException $e) {
+            error_log("ข้อผิดพลาดในการดึงรายการกลุ่ม (SDK): " . $e->getMessage());
+            throw new Exception("ข้อผิดพลาด SDK ในการดึงรายการกลุ่ม: " . $e->getMessage());
+        }
+    }
+
+    public function send_user_roll_access($app_id, $user_id, $user_access_token)
+    {
+        if ($this->fb === null) {
+            throw new Exception("Facebook SDK ไม่ได้เริ่มต้น.");
+        }
+        if (empty($app_id) || empty($user_id) || empty($user_access_token)) {
+            throw new InvalidArgumentException("App ID, User ID, หรือ User Access Token ว่างเปล่า.");
+        }
+
+        try {
+            $response = $this->fb->post(
+                "/{$app_id}/roles",
+                [
+                    'user' => $user_id,
+                    'role' => 'testers'
+                ],
+                $user_access_token
+            );
+            return $response->getGraphNode()->asArray();
+        } catch (FacebookResponseException $e) {
+            error_log("ข้อผิดพลาดในการกำหนดบทบาทผู้ใช้ (Graph): " . $e->getMessage());
+            throw new Exception("ไม่สามารถกำหนดบทบาทผู้ใช้ได้: " . $e->getMessage());
+        } catch (FacebookSDKException $e) {
+            error_log("ข้อผิดพลาดในการกำหนดบทบาทผู้ใช้ (SDK): " . $e->getMessage());
+            throw new Exception("ข้อผิดพลาด SDK ในการกำหนดบทบาทผู้ใช้: " . $e->getMessage());
+        }
+    }
+
+    public function block_person_from_commenting($page_id, $commenter_id, $page_access_token)
+    {
+        if ($this->fb === null) {
+            throw new Exception("Facebook SDK ไม่ได้เริ่มต้น.");
+        }
+        if (empty($page_id) || empty($commenter_id) || empty($page_access_token)) {
+            throw new InvalidArgumentException("Page ID, Commenter ID, หรือ Page Access Token ว่างเปล่า.");
+        }
+
+        try {
+            $response = $this->fb->post(
+                "/{$page_id}/blocked",
+                [
+                    'user' => $commenter_id
+                ],
+                $page_access_token
+            );
+            return $response->getGraphNode()->asArray();
+        } catch (FacebookResponseException $e) {
+            error_log("ข้อผิดพลาดในการบล็อกผู้ใช้จากการคอมเมนต์ (Graph): " . $e->getMessage());
+            throw new Exception("ไม่สามารถบล็อกผู้ใช้จากการคอมเมนต์ได้: " . $e->getMessage());
+        } catch (FacebookSDKException $e) {
+            error_log("ข้อผิดพลาดในการบล็อกผู้ใช้จากการคอมเมนต์ (SDK): " . $e->getMessage());
+            throw new Exception("ข้อผิดพลาด SDK ในการบล็อกผู้ใช้จากการคอมเมนต์: " . $e->getMessage());
+        }
+    }
+
+    public function get_metrics_page_post($post_id, $page_access_token)
+    {
+        if ($this->fb === null)
+// Assuming this is part of a class structure in a CodeIgniter or similar framework.
+
+// Updated to use Facebook Graph API v23.0
+
+        public function app_info_graber($app_id='',$app_secret='')
+        {
+                // Changed API version from v4.0 to v23.0
+                // Removed 'photo_url' as it's not a standard field for an 'app' object.
+                // You might need to check if 'link' and 'category' are still relevant or if you need specific permissions.
+                // For app information, typically 'name', 'id', and perhaps 'app_domains' or 'app_type' are relevant.
+                $url = "https://graph.facebook.com/v23.0/".$app_id."?access_token=".$app_id."|".$app_secret."&fields=name,link,id,category";
+                $headers = array("Content-type: application/json");
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                curl_setopt($ch, CURLOPT_URL, $url);
+                // curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1); // Can be uncommented if redirects are expected
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // WARNING: Setting this to false is insecure and not recommended for production.
+                                                                 // For production, ensure you have proper CA certs and set to true.
+                curl_setopt($ch, CURLOPT_COOKIEJAR,'cookie.txt');  // Cookies are generally not needed for stateless Graph API calls.
+                curl_setopt($ch, CURLOPT_COOKIEFILE,'cookie.txt'); // Can be removed if not explicitly managing session cookies.
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:89.0) Gecko/20100101 Firefox/89.0");
+                // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Duplicate, can remove one.
+
+                $st=curl_exec($ch);
+                curl_close($ch); // Always close cURL handle
+
+                $result=json_decode($st,TRUE);
+                return $result;
+        }
+
+
+        // ================== webhook enable disable ==============//
+        // Array([success] => 1)
+        public function enable_bot($page_id='',$post_access_token='')
+        {
+                if($page_id=='' || $post_access_token=='')
+                {
+                        return array('success'=>0,'error'=>$this->CI->lang->line("Something went wrong, please try again."));
+                        // exit(); // Avoid exit() in library/class methods; return error instead.
+                }
+                try
+                {
+                        $params=array();
+                        $params['subscribed_fields']= array("messages","messaging_optins","messaging_postbacks","messaging_referrals","feed","message_echoes");
+                        // Assuming $this->fb is an instance of the Facebook PHP SDK, it should handle API versioning internally if configured correctly.
+                        // If not, ensure the SDK is configured for v23.0.
+                        $response = $this->fb->post("{$page_id}/subscribed_apps",$params,$post_access_token);
+                        $response = $response->getGraphObject()->asArray();
+                        $response['error']='';
+                        return $response;
+                }
+                catch (Exception $e)
+                {
+                        return array('success'=>0,'error'=>$e->getMessage());
+                }
+        }
+
+        // Array([success] => 1)
+        public function disable_bot($page_id='',$post_access_token='')
+        {
+                if($page_id=='' || $post_access_token=='')
+                {
+                        return array('success'=>0,'error'=>$this->CI->lang->line("Something went wrong, please try again."));
+                        // exit(); // Avoid exit() in library/class methods; return error instead.
+                }
+                try
+                {
+                        // Assuming $this->fb is an instance of the Facebook PHP SDK, it should handle API versioning internally if configured correctly.
+                        $response = $this->fb->delete("{$page_id}/subscribed_apps",array(),$post_access_token);
+                        $response = $response->getGraphObject()->asArray();
+                        $response['error']='';
+                        return $response;
+                }
+                catch (Exception $e)
+                {
+                        return array('success'=>0,'error'=>$e->getMessage());
+                }
+        }
+
+        /* Delete Persistent Menu */
+        public function delete_persistent_menu($post_access_token='',$media_type='')
+        {
+                if($media_type=="") $media_type="fb";
+
+                // Updated API version from v4.0 to v23.0
+                if($media_type=="fb")
+                        $url = "https://graph.facebook.com/v23.0/me/messenger_profile?access_token={$post_access_token}";
+                else
+                        $url = "https://graph.facebook.com/v23.0/me/messenger_profile?access_token={$post_access_token}&platform=instagram";
+
+                $get_started_data='{"fields":["persistent_menu"]}'; // This payload is correct for deleting specific fields.
+
+                $ch = curl_init();
+                 $headers = array("Content-type: application/json; charset=UTF-8");
+
+                 curl_setopt($ch, CURLOPT_URL, $url);
+                 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+                 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+                 curl_setopt($ch,CURLOPT_POSTFIELDS,$get_started_data);
+
+                 // curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // WARNING: Insecure for production.
+                 curl_setopt($ch, CURLOPT_COOKIEJAR,'cookie.txt');
+                 curl_setopt($ch, CURLOPT_COOKIEFILE,'cookie.txt');
+                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                 curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.3) Gecko/20070309 Firefox/2.0.0.3");
+                 $st=curl_exec($ch);
+                 curl_close($ch);
+                 $result=json_decode($st,TRUE);
+                 return $result;
+        }
+
+        /* Delete get Started Button */
+        public function delete_get_started_button($post_access_token='')
+        {
+                // Updated API version from v4.0 to v23.0
+                $url = "https://graph.facebook.com/v23.0/me/messenger_profile?access_token={$post_access_token}";
+                $get_started_data='{"fields":["get_started"]}';
+
+                $ch = curl_init();
+                 $headers = array("Content-type: application/json");
+
+                 curl_setopt($ch, CURLOPT_URL, $url);
+                 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+                 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+                 curl_setopt($ch,CURLOPT_POSTFIELDS,$get_started_data);
+
+                 // curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // WARNING: Insecure for production.
+                 curl_setopt($ch, CURLOPT_COOKIEJAR,'cookie.txt');
+                 curl_setopt($ch, CURLOPT_COOKIEFILE,'cookie.txt');
+                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                 curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.3) Gecko/20070309 Firefox/2.0.0.3");
+                 $st=curl_exec($ch);
+                 curl_close($ch);
+                 $result=json_decode($st,TRUE);
+
+                 if(isset($result["result"]))
+                {
+                        $result["result"]=$this->CI->lang->line(trim($result["result"]));
+                        $result['success']=1;
+                }
+                if(isset($result["error"]))
+                {
+                        $result["result"]=isset($result["error"]["message"]) ? $result["error"]["message"] : $this->CI->lang->line("Something went wrong, please try again.");
+                        $result['success']=0;
+                }
+                return $result;
+        }
+
+
+        /* Add get Started Button */
+        public function add_get_started_button($post_access_token='')
+        {
+                // Updated API version from v4.0 to v23.0
+                $url = "https://graph.facebook.com/v23.0/me/messenger_profile?access_token={$post_access_token}";
+                $get_started_data='{"get_started":{"payload":"GET_STARTED_PAYLOAD"}}';
+
+                $ch = curl_init();
+                 $headers = array("Content-type: application/json");
+
+                 curl_setopt($ch, CURLOPT_URL, $url);
+                 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+                 curl_setopt($ch,CURLOPT_POST,1);
+                 curl_setopt($ch,CURLOPT_POSTFIELDS,$get_started_data);
+
+                 // curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // WARNING: Insecure for production.
+                 curl_setopt($ch, CURLOPT_COOKIEJAR,'cookie.txt');
+                 curl_setopt($ch, CURLOPT_COOKIEFILE,'cookie.txt');
+                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                 curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.3) Gecko/20070101 Firefox/2.0.0.3");
+                 $st=curl_exec($ch);
+                 curl_close($ch);
+                 $result=json_decode($st,TRUE);
+                 if(isset($result["result"]))
+                {
+                        $result["result"]=$this->CI->lang->line(trim($result["result"]));
+                        $result['success']=1;
+                }
+                if(isset($result["error"]))
+                {
+                        $result["result"]=isset($result["error"]["message"]) ? $result["error"]["message"] : $this->CI->lang->line("Something went wrong, please try again.");
+                        $result['success']=0;
+                }
+                return $result;
+        }
+
+
+        public function set_welcome_message($post_access_token='',$welcome_message='')
+        {
+                if($welcome_message=='') return false;
+
+                // Updated API version from v4.0 to v23.0
+                $url = "https://graph.facebook.com/v23.0/me/messenger_profile?access_token={$post_access_token}";
+                $get_started_data=array
+                (
+                        'greeting'=>array(0=>array("locale"=>"default","text"=>$welcome_message))
+                );
+                $get_started_data=json_encode($get_started_data);
+
+                $ch = curl_init();
+                 $headers = array("Content-type: application/json");
+
+                 curl_setopt($ch, CURLOPT_URL, $url);
+                 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+                 curl_setopt($ch,CURLOPT_POST,1);
+                 curl_setopt($ch,CURLOPT_POSTFIELDS,$get_started_data);
+
+                 // curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // WARNING: Insecure for production.
+                 curl_setopt($ch, CURLOPT_COOKIEJAR,'cookie.txt');
+                 curl_setopt($ch, CURLOPT_COOKIEFILE,'cookie.txt');
+                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                 curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.3) Gecko/20070309 Firefox/2.0.0.3");
+                 $st=curl_exec($ch);
+                 curl_close($ch);
+                 $result=json_decode($st,TRUE);
+                 if(isset($result["result"]))
+                {
+                        $result["result"]=$this->CI->lang->line(trim($result["result"]));
+                        $result['success']=1;
+                }
+                if(isset($result["error"]))
+                {
+                        $result["result"]=isset($result["error"]["message"]) ? $result["error"]["message"] : $this->CI->lang->line("Something went wrong, please try again.");
+                        $result['success']=0;
+                }
+
+                return $result;
+        }
+
+        public function unset_welcome_message($post_access_token='')
+        {
+                // Updated API version from v4.0 to v23.0
+                $url = "https://graph.facebook.com/v23.0/me/messenger_profile?access_token={$post_access_token}";
+                $get_started_data='{"fields":["greeting"]}';
+
+                $ch = curl_init();
+                 $headers = array("Content-type: application/json");
+
+                 curl_setopt($ch, CURLOPT_URL, $url);
+                 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+                 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+                 curl_setopt($ch,CURLOPT_POSTFIELDS,$get_started_data);
+
+                 // curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // WARNING: Insecure for production.
+                 curl_setopt($ch, CURLOPT_COOKIEJAR,'cookie.txt');
+                 curl_setopt($ch, CURLOPT_COOKIEFILE,'cookie.txt');
+                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                 curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.3) Gecko/20070309 Firefox/2.0.0.3");
+                 $st=curl_exec($ch);
+                 curl_close($ch);
+                 $result=json_decode($st,TRUE);
+
+                 if(isset($result["result"]))
+                {
+                        $result["result"]=$this->CI->lang->line(trim($result["result"]));
+                        $result['success']=1;
+                }
+                if(isset($result["error"]))
+                {
+                        $result["result"]=isset($result["error"]["message"]) ? $result["error"]["message"] : $this->CI->lang->line("Something went wrong, please try again.");
+                        $result['success']=0;
+                }
+                return $result;
+        }
+
+
+        /* Add Persistent Menu */
+        public function add_persistent_menu($post_access_token='',$menu_content_json='',$media_type='')
+        {
+                if($media_type=="") $media_type="fb";
+
+                // Updated API version from v4.0 to v23.0
+                if($media_type=="fb")
+                        $url = "https://graph.facebook.com/v23.0/me/messenger_profile?access_token={$post_access_token}";
+                else
+                        $url = "https://graph.facebook.com/v23.0/me/messenger_profile?access_token={$post_access_token}&platform=instagram";
+
+                $get_started_data=$menu_content_json; // This is a generic name; consider renaming to $menu_payload or similar.
+
+                $ch = curl_init();
+                 $headers = array("Content-type: application/json");
+
+                 curl_setopt($ch, CURLOPT_URL, $url);
+                 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+                 curl_setopt($ch,CURLOPT_POST,1);
+                 curl_setopt($ch,CURLOPT_POSTFIELDS,$get_started_data);
+
+                 // curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // WARNING: Insecure for production.
+                 curl_setopt($ch, CURLOPT_COOKIEJAR,'cookie.txt');
+                 curl_setopt($ch, CURLOPT_COOKIEFILE,'cookie.txt');
+                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                 curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.3) Gecko/20070309 Firefox/2.0.0.3");
+                 $st=curl_exec($ch);
+                 curl_close($ch);
+                 $result=json_decode($st,TRUE);
+                return $result;
+        }
+
+
+
+        function get_page_review_status($post_access_token='')
+        {
+                // Updated API version from v4.0 to v23.0
+                $url="https://graph.facebook.com/v23.0/me/messaging_feature_review?access_token={$post_access_token}";
+                $headers = array("Content-type: application/json");
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $url);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                // curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // WARNING: Insecure for production.
+                curl_setopt($ch, CURLOPT_COOKIEJAR,'cookie.txt');
+                curl_setopt($ch, CURLOPT_COOKIEFILE,'cookie.txt');
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.3) Gecko/20070309 Firefox/2.0.0.3");
+                $st=curl_exec($ch);
+                curl_close($ch);
+
+                $result=json_decode($st,TRUE);
+
+                return $result;
+        }
+
+
+        //https://developers.facebook.com/docs/messenger-platform/send-messages/broadcast-messages/estimate-reach/
+        function start_reach_estimation($post_access_token='')
+        {
+                // Updated API version from v4.0 to v23.0
+                $url="https://graph.facebook.com/v23.0/me/broadcast_reach_estimations?access_token={$post_access_token}&method=post";
+                $ch = curl_init();
+                $headers = array("Content-type: application/json");
+
+                curl_setopt($ch, CURLOPT_URL, $url);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                // curl_setopt($ch,CURLOPT_POST,1); // This method implicitly sets POST if data is provided. Given the URL has method=post, it's likely a GET request with a query param.
+                //curl_setopt($ch,CURLOPT_POSTFIELDS,$message); // No message needed for starting estimation, typically.
+                // curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // WARNING: Insecure for production.
+                curl_setopt($ch, CURLOPT_COOKIEJAR,'cookie.txt');
+                curl_setopt($ch, CURLOPT_COOKIEFILE,'cookie.txt');
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.3) Gecko/20070309 Firefox/2.0.0.3");
+                $st=curl_exec($ch);
+                curl_close($ch);
+
+                $result=json_decode($st,TRUE);
+
+                return $result;
+        }
+
+
+
+        function reach_estimation_count($reach_estimation_id='',$post_access_token='')
+        {
+                // Updated API version from v4.0 to v23.0
+                $url="https://graph.facebook.com/v23.0/{$reach_estimation_id}?access_token={$post_access_token}";
+                $ch = curl_init();
+                $headers = array("Content-type: application/json");
+
+                curl_setopt($ch, CURLOPT_URL, $url);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                // curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // WARNING: Insecure for production.
+                curl_setopt($ch, CURLOPT_COOKIEJAR,'cookie.txt');
+                curl_setopt($ch, CURLOPT_COOKIEFILE,'cookie.txt');
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.3) Gecko/20070309 Firefox/2.0.0.3");
+                $st=curl_exec($ch);
+                curl_close($ch);
+
+                $result=json_decode($st,TRUE);
+
+                return $result;
+        }
+
+?>
+
 
         /*** Subscription based message sent  https://developers.facebook.com/docs/messenger-platform/send-messages/message-tags ***/
         function send_non_promotional_message_subscription($message='[]',$post_access_token='')

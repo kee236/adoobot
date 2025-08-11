@@ -1,4 +1,7 @@
-<?php  if ( ! defined('BASEPATH')) exit('No direct script access allowed');
+<?php  
+
+
+if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 
 /**
  * CodeIgniter Path Helpers
@@ -174,6 +177,26 @@ if ( ! function_exists('numtophrase'))
 //   }
 // }
 
+
+
+
+
+if (!function_exists('thai_date')) {
+    function thai_date($date_string) {
+        $th_month = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+        $date = new DateTime($date_string);
+        $day = $date->format('j');
+        $month = $th_month[$date->format('n') - 1];
+        $year = $date->format('Y') + 543;
+        return "$day $month $year";
+    }
+}
+
+if (!function_exists('thai_currency')) {
+    function thai_currency($number) {
+        return number_format($number, 2) . ' บาท';
+    }
+}
 
 
 if ( ! function_exists('date_time_calculator'))
